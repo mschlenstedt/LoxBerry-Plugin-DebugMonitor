@@ -1,0 +1,10 @@
+#!/bin/bash
+# Debug Monitor watchdog - runs every minute as user "loxberry".
+#
+# Thin wrapper; the logic lives in DebugMonitor::watchdog (dmon_ctl.pl). It
+# restarts the receiver if it crashed or hangs - unless the user stopped it.
+# Silent while all is well; a restart is logged as "watchdog" session.
+
+perl REPLACELBPBINDIR/dmon_ctl.pl watchdog >/dev/null 2>&1
+
+exit 0

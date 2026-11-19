@@ -1,0 +1,246 @@
+<div class="dmm tmm" id="tmm">
+	<div class="dmm-top">
+		<span class="dmm-state" id="t-state"><span class="dm-dot"></span> …</span>
+		<select class="dmm-ip" id="t-ms" title="<TMPL_VAR TASK.MS_HINT>"></select>
+		<span class="dmm-cnt" id="t-info"></span>
+		<button type="button" class="dmm-btn" id="t-pause"><i class="pi pi-pause"></i> <span><TMPL_VAR TASK.PAUSE></span></button>
+		<button type="button" class="dmm-btn dmm-close" id="t-close" title="<TMPL_VAR TASK.CLOSE>"><i class="pi pi-times"></i></button>
+	</div>
+	<div class="tmm-body">
+		<div class="tmm-threads">
+			<table class="tmm-table" id="t-table">
+				<thead><tr>
+					<th data-k="i"><TMPL_VAR TASK.COL_THREAD></th>
+					<th data-k="cpu" class="num"><TMPL_VAR TASK.COL_CPU></th>
+					<th data-k="time" class="num"><TMPL_VAR TASK.COL_TIME></th>
+					<th data-k="stack" class="num"><TMPL_VAR TASK.COL_STACK></th>
+					<th data-k="ctx" class="num"><TMPL_VAR TASK.COL_CTX></th>
+					<th data-k="state"><TMPL_VAR TASK.COL_STATE></th>
+					<th data-k="mem" class="num"><TMPL_VAR TASK.COL_MEM></th>
+					<th data-k="nmem" class="num"><TMPL_VAR TASK.COL_NMEM></th>
+				</tr></thead>
+				<tbody id="t-rows"><tr><td colspan="8" class="tmm-empty"><TMPL_VAR TASK.WAIT></td></tr></tbody>
+			</table>
+		</div>
+		<div class="tmm-side">
+			<div class="tmm-stats" id="t-stats"></div>
+			<div class="tmm-graph"><canvas id="t-graph"></canvas><span class="tmm-graph-max">100%</span></div>
+		</div>
+	</div>
+</div>
+
+<script>
+(function () {
+	'use strict';
+	var T = <TMPL_VAR TASK_STRINGS>;
+	document.documentElement.classList.add('dmm-page');
+
+	// Thread names: the stream carries only an ID, the Loxone Monitor names
+	// them from a fixed table. Taken from its display (Gen 1 and Gen 2).
+	var NAMES = {
+		0x0200: 'Idle', 0x0201: 'Main', 0x0202: 'ETH', 0x0203: 'TCP', 0x0204: 'NTP', 0x0205: 'DHCP',
+		0x0206: 'DebugSend', 0x0208: 'Lnk', 0x0209: 'Watchdog', 0x020a: 'Netbios', 0x020c: 'SSDP',
+		0x020d: 'PRG', 0x020e: 'MQ', 0x0210: 'EIB', 0x0211: 'CAN', 0x0212: 'IO', 0x0213: 'SMTP',
+		0x0214: 'HTC', 0x0215: 'EIBrcv', 0x0216: 'LoxCfg', 0x0217: 'Stats', 0x0218: 'EibIP',
+		0x0219: 'PrgEx', 0x021a: 'AQ', 0x021b: 'mDNS', 0x021f: 'TICK', 0x028d: 'Ping', 0x0290: 'Sys',
+		0x0291: 'LnkTx', 0x0292: 'VUdp', 0x0293: 'Listen', 0x029f: 'DevDisc', 0x02a0: 'DNS',
+		0x02a1: 'Update', 0x0353: 'LxPair', 0x021e: 'IPC', 0x0220: 'SIA', 0x0207: 'SR'
+	};
+	// Threads that exist several times: base ID plus instance number
+	// (HTTP35 = 0x0230 + 35, VO22 = 0x2710 + 22). Same in dmon_receiver.py.
+	var SERIES = [[0x0230, 64, 'HTTP'], [0x2710, 500, 'VO'], [0x2904, 500, 'VI'], [0x02a8, 16, 'Modbus'],
+		[0x02ee, 8, 'ExecutableComm'], [0x0302, 8, 'Media']];
+	function threadName(id) {
+		if (NAMES[id]) return NAMES[id];
+		for (var i = 0; i < SERIES.length; i++) {
+			if (id >= SERIES[i][0] && id < SERIES[i][0] + SERIES[i][1]) return SERIES[i][2] + (id - SERIES[i][0]);
+		}
+		return '0x' + ('000' + id.toString(16)).slice(-4);
+	}
+
+	var data = {}, ms = '', paused = false, sortKey = 'i', sortDir = 1;
+	var sel = document.getElementById('t-ms'), rowsEl = document.getElementById('t-rows');
+	var statsEl = document.getElementById('t-stats'), infoEl = document.getElementById('t-info');
+	var canvas = document.getElementById('t-graph');
+	try { ms = localStorage.getItem('dm-taskmon-ms') || ''; } catch (e) { /* no storage */ }
+
+	function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+	function fmt(s) { var a = arguments, i = 1; return String(s).replace(/%s/g, function () { return a[i++]; }); }
+	function n(v) { return v == null ? 'n/a' : String(v); }
+	function na(v) { return v ? n(v) : 'n/a'; }
+	function pct(v) { return v == null ? 'n/a' : Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+	function hex8(v) { return ('00000000' + (v >>> 0).toString(16).toUpperCase()).slice(-8); }
+	function uptime(ms) {
+		var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600), mm = Math.floor(s % 3600 / 60);
+		return (d ? d + ' d ' : '') + hh + ' h ' + mm + ' min';
+	}
+	function isGen2(snap) {
+		return snap.stats.gen === 2 || snap.threads.every(function (t) { return !t.stack[1]; });
+	}
+	// Gen 1: 0 Running, 2 Wait, 4 Ready. Gen 2: low nibble the state, high
+	// nibble shown after a slash, as "Sleep/3" in the Loxone Monitor.
+	function stateText(t, gen2) {
+		var s;
+		if (gen2) {
+			var lo = t.state & 15, hi = t.state >> 4;
+			s = ({ 0: 'Ready', 1: 'Running', 2: 'Sleep', 4: 'Sleep' })[lo] || ('State ' + lo);
+			s += '/' + hi;
+		} else {
+			s = ({ 0: 'Running', 2: 'Wait', 4: 'Ready' })[t.state] || ('State ' + t.state);
+		}
+		// What it waits for, as the Loxone Monitor names it: 0x0267 a listening
+		// socket, 0x0266 a receive event, any other object a write ("Wr").
+		if (!gen2 && t.obj) {
+			s += t.obj === 0x0267 ? ' Listen' + t.port : t.obj === 0x0266 ? ' RcvEv' + t.port : ' Wr ' + t.port;
+		}
+		return s;
+	}
+
+	function stats(snap) {
+		var s = snap.stats;
+		var col = function (title, rows) {
+			return '<div class="tmm-col"><div class="tmm-colt">' + esc(title) + '</div>' + rows.map(function (r) {
+				return '<div class="tmm-row"' + (r[2] ? ' title="' + esc(r[2]) + '"' : '') + '><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
+			}).join('') + '</div>';
+		};
+		statsEl.innerHTML =
+			col('CPU', [
+				['Usage', snap.usage == null ? 'n/a' : pct(snap.usage) + ' %'],
+				['Heap', n(Math.round(s.heap / 1024)) + 'kB'],
+				['Max', n(Math.round(s.heap_max / 1024)) + 'kB'],
+				['Wdog', hex8(s.wdog)],
+				['CoSw', na(s.cosw)],
+				['CSint', na(s.csint)],
+				['Time', n(s.time_ms), uptime(s.time_ms)],
+				['Temp', s.temp ? s.temp + '°' : 'n/a']
+			]) +
+			col('LAN stats', [
+				['TxP', n(s.txp)], ['TxE/c', s.txe + '/' + s.txc], ['Exhau/Urun', s.exhau + '/' + s.urun],
+				['RxP', n(s.rxp)], ['EOF/Ovrun', s.eof + '/' + s.ovrun], ['NoBuf/Sof', n(s.nobuf) + '/' + s.sof],
+				['Frag', n(s.frag)]
+			]) +
+			col('Link stats', [
+				['Sent', n(s.sent)], ['Rcv', n(s.rcv)], ['Err/OvE', s.err + '/' + s.ove], ['TEC/REC', s.tec + '/' + s.rec],
+				['Ticks', na(s.ticks)], ['Lnk', na(s.lnk)], ['EMAC', na(s.emac)]
+			]);
+	}
+
+	function table(snap) {
+		var gen2 = isGen2(snap);
+		// Gen 2 calls the column "Timeout" in the Loxone Monitor
+		document.querySelector('#t-table th[data-k="time"]').textContent = gen2 ? T.COL_TIMEOUT : T.COL_TIME;
+		var rows = snap.threads.map(function (t, i) {
+			return { i: i, t: t, name: threadName(t.id),
+				cpu: t.cpu, time: t.time == null ? Infinity : t.time, stack: t.stack[0], ctx: t.ctx,
+				state: stateText(t, gen2), mem: t.mem, nmem: t.nmem };
+		});
+		rows.sort(function (a, b) {
+			var x = a[sortKey], y = b[sortKey];
+			return (x < y ? -1 : x > y ? 1 : a.i - b.i) * sortDir;
+		});
+		rowsEl.innerHTML = rows.map(function (r) {
+			var t = r.t;
+			return '<tr' + (t.cpu >= 5 ? ' class="hot"' : '') + '><td title="ID 0x' + t.id.toString(16) + '">' + esc(r.name) + '</td>' +
+				'<td class="num">' + pct(t.cpu) + '</td>' +
+				'<td class="num">' + (t.time == null ? 'endless' : n(t.time)) + '</td>' +
+				'<td class="num">' + (t.stack[1] ? n(t.stack[0]) + '/' + n(t.stack[1]) : 'n/a') + '</td>' +
+				'<td class="num">' + n(t.ctx) + '</td>' +
+				'<td>' + esc(r.state) + '</td>' +
+				'<td class="num">' + n(t.mem) + '</td><td class="num">' + n(t.nmem) + '</td></tr>';
+		}).join('');
+	}
+
+	function graph(hist) {
+		var w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
+		if (!w || !h) return;
+		if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+		var c = canvas.getContext('2d');
+		c.setTransform(dpr, 0, 0, dpr, 0, 0);
+		c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
+		c.strokeStyle = '#0a3a0a'; c.lineWidth = 1;
+		for (var gx = w; gx > 0; gx -= 12) { c.beginPath(); c.moveTo(gx + 0.5, 0); c.lineTo(gx + 0.5, h); c.stroke(); }
+		for (var gy = 0; gy < h; gy += 12) { c.beginPath(); c.moveTo(0, gy + 0.5); c.lineTo(w, gy + 0.5); c.stroke(); }
+		if (!hist || hist.length < 2) return;
+		// Newest sample on the right edge, 2 px per sample as in the Loxone Monitor
+		var step = 2, x0 = w - (hist.length - 1) * step;
+		c.strokeStyle = '#2bff2b'; c.lineWidth = 1; c.beginPath();
+		hist.forEach(function (p, i) {
+			var x = x0 + i * step, y = h - 2 - (h - 4) * Math.min(100, Math.max(0, p[1])) / 100;
+			if (i) c.lineTo(x, y); else c.moveTo(x, y);
+		});
+		c.stroke();
+	}
+
+	function render() {
+		var ips = Object.keys(data).sort(function (a, b) {
+			var k = function (x) { return x.split('.').map(function (v) { return ('00' + v).slice(-3); }).join('.'); };
+			return k(a) < k(b) ? -1 : 1;
+		});
+		if (ips.join() !== Array.prototype.map.call(sel.options, function (o) { return o.value; }).join()) {
+			sel.innerHTML = ips.map(function (ip) { return '<option value="' + esc(ip) + '">' + esc(fmt(T.MS, ip)) + '</option>'; }).join('');
+		}
+		if (!ips.length) {
+			rowsEl.innerHTML = '<tr><td colspan="8" class="tmm-empty">' + esc(T.WAIT) + '</td></tr>';
+			statsEl.innerHTML = '';
+			graph([]);
+			return;
+		}
+		if (ips.indexOf(ms) < 0) ms = ips[0];
+		sel.value = ms;
+		var snap = data[ms];
+		var age = Date.now() / 1000 - snap.time;
+		infoEl.textContent = fmt(T.INFO, snap.threads.length, new Date(snap.time * 1000).toLocaleTimeString());
+		document.getElementById('t-state').innerHTML = '<span class="dm-dot ' + (age < 5 ? 'on' : 'idle') + '"></span> ' +
+			esc(age < 5 ? T.LIVE : fmt(T.OLD, Math.round(age)));
+		stats(snap);
+		table(snap);
+		graph(snap.hist);
+	}
+
+	function poll() {
+		if (paused) return setTimeout(poll, 1000);
+		fetch('ajax.cgi?action=taskmon', { cache: 'no-store' })
+			.then(function (r) { return r.json(); })
+			.then(function (d) {
+				if (!d.ok) throw new Error(d.error);
+				data = d.data || {};
+				if (!d.running) {
+					document.getElementById('t-state').innerHTML = '<span class="dm-dot off"></span> ' + esc(T.STOPPED);
+				}
+				render();
+			})
+			.catch(function () {
+				document.getElementById('t-state').innerHTML = '<span class="dm-dot bad"></span> ' + esc(T.LOST);
+			})
+			.then(function () { setTimeout(poll, 1000); });
+	}
+
+	sel.addEventListener('change', function () {
+		ms = sel.value;
+		try { localStorage.setItem('dm-taskmon-ms', ms); } catch (e) { /* no storage */ }
+		render();
+	});
+	document.querySelector('#t-table thead').addEventListener('click', function (e) {
+		var th = e.target.closest('th');
+		if (!th) return;
+		var k = th.dataset.k;
+		if (k === sortKey) sortDir = -sortDir;
+		else { sortKey = k; sortDir = (k === 'i' || k === 'state') ? 1 : -1; }
+		this.querySelectorAll('th').forEach(function (x) { x.removeAttribute('aria-sort'); });
+		th.setAttribute('aria-sort', sortDir > 0 ? 'ascending' : 'descending');
+		render();
+	});
+	document.getElementById('t-pause').addEventListener('click', function () {
+		paused = !paused;
+		this.querySelector('i').className = paused ? 'pi pi-play' : 'pi pi-pause';
+		this.querySelector('span').textContent = paused ? T.RESUME : T.PAUSE;
+		this.setAttribute('aria-pressed', paused ? 'true' : 'false');
+	});
+	document.getElementById('t-close').addEventListener('click', function () {
+		window.close();
+		setTimeout(function () { location.href = 'index.cgi?form=monitor'; }, 150);
+	});
+	window.addEventListener('resize', function () { if (data[ms]) graph(data[ms].hist); });
+	poll();
+})();
+</script>

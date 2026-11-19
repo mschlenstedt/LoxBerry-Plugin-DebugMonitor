@@ -1,0 +1,218 @@
+/* Debug Monitor - own styles on top of the LoxBerry Design System.
+   Page parts use --lb-* tokens only, so every theme keeps working. Own classes
+   start with dm- (page) and dmm- (full-screen monitor). The monitor is a
+   terminal and keeps its own dark palette in every theme (--dmm-* below).
+   Labels that wrap an input are set to inline-flex by the DS, so own label
+   layouts need !important. */
+
+[hidden] { display: none !important; }
+
+/* --- Building blocks ----------------------------------------------------- */
+.dm-title { margin: 0; font-size: 20px; font-weight: 600; color: var(--lb-text); }
+.dm-lead { margin: 5px 0 18px; color: var(--lb-text-secondary); font-size: 14px; }
+.dm-lead a { color: var(--lb-primary); }
+.dm-sect { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--lb-text-muted); margin: 24px 0 9px; font-weight: 600; }
+.dm-k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--lb-text-muted); display: block; margin-bottom: 3px; }
+.dm-v { font-size: 16px; font-weight: 600; color: var(--lb-text); font-variant-numeric: tabular-nums; }
+.dm-sub { display: block; font-size: 12px; color: var(--lb-text-muted); }
+.dm-mono { font-family: var(--lb-font-mono); }
+.dm-err { color: var(--lb-danger) !important; }
+.dm-help { margin: 6px 0 0; font-size: 12.5px; color: var(--lb-text-muted); }
+.dm-off { opacity: .45; pointer-events: none; }
+.dm-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; background: var(--lb-text-muted); }
+.dm-dot.on { background: var(--lb-success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--lb-success) 20%, transparent); }
+.dm-dot.idle { background: var(--lb-warning); }
+.dm-dot.bad { background: var(--lb-danger); }
+.dm-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px; font-size: 12.5px; white-space: nowrap;
+	background: color-mix(in srgb, var(--lb-text) 7%, transparent); color: var(--lb-text-secondary); }
+.dm-pill .pi { font-size: 12px; }
+.dm-pill.ok { background: color-mix(in srgb, var(--lb-success) 15%, transparent); color: var(--lb-text); }
+.dm-pill.err { background: color-mix(in srgb, var(--lb-danger) 12%, transparent); color: var(--lb-danger); }
+.dm-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 9px; color: var(--lb-text); }
+
+/* --- Status card ----------------------------------------------------------- */
+.dm-status { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); padding: 0 !important; overflow: hidden; margin-bottom: 20px; }
+.dm-status > div { padding: 13px 18px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dm-status > div + div { border-left: 1px solid var(--lb-border-color); }
+.dm-status .dm-pill { margin-top: 4px; align-self: flex-start; }
+.dm-status .dm-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) {
+	.dm-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.dm-status > div:first-child { grid-column: 1 / -1; }
+	.dm-status > div + div { border-left: 0; border-top: 1px solid var(--lb-border-color); }
+	.dm-status > div:nth-child(3) { border-left: 1px solid var(--lb-border-color); }
+}
+
+/* --- Loxone Config hint ---------------------------------------------------- */
+.dm-callout ol { margin: 6px 0 0; padding-left: 20px; color: var(--lb-text-secondary); font-size: 13.5px; line-height: 2; }
+.dm-tgt { display: inline-flex; align-items: center; gap: 8px; background: var(--lb-card-bg); border: 1px solid var(--lb-border-color);
+	border-radius: 8px; padding: 2px 4px 2px 10px; font-family: var(--lb-font-mono); font-size: 13px; color: var(--lb-text); vertical-align: middle; }
+.dm-tgt .lb-btn { margin: 0 !important; padding: 2px 8px !important; min-height: 0; }
+.dm-tgts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 6px; line-height: 1.4; }
+.dm-tgtfld { display: inline-flex; flex-direction: column; gap: 2px; }
+.dm-tgtfld .dm-k { margin: 0; }
+.dm-hint { margin: 8px 0 0; font-size: 12.5px; color: var(--lb-text-muted); }
+
+/* --- Port row and settings ------------------------------------------------- */
+.dm-portrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.dm-portrow .lb-btn { margin: 0 !important; }
+.dm-fld { display: flex; flex-direction: column; gap: 5px; }
+.dm-fld .lb-input { width: 7.5em; }
+.dm-fld .lb-input.dm-host { width: 16em; max-width: 70vw; }
+.dm-num { width: 8em !important; }
+.dm-auto { width: auto !important; min-width: 10em; }
+.dm-set { padding: 14px 18px; }
+.dm-set .dm-portrow { margin-top: 12px; }
+.dm-switchrow { display: flex; align-items: center; gap: 10px; }
+.dm-switchlabel { font-weight: 600; font-size: 14px; color: var(--lb-text); cursor: pointer; }
+#rec-opts { margin-top: 10px; }
+
+/* --- AI access ------------------------------------------------------------- */
+.dm-switchrow .dm-pill { margin-left: auto; }
+.dm-tokenrow { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 14px; }
+.dm-tokenrow .dm-k { width: 100%; margin: 0; }
+.dm-token { max-width: 100%; overflow-wrap: anywhere; }
+.dm-cmd { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 12px; }
+.dm-cmd code { flex: 1; min-width: 0; display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--lb-font-mono);
+	font-size: 12.5px; background: var(--lb-card-bg); border: 1px solid var(--lb-border-color); border-radius: 8px; padding: 8px 10px; color: var(--lb-text); }
+.dm-cmd .lb-btn { margin: 0 !important; flex: none; }
+.dm-set > .dm-k { margin-top: 4px; }
+.dm-tools { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.9; color: var(--lb-text-secondary); }
+.dm-tools code { font-family: var(--lb-font-mono); color: var(--lb-text); }
+
+/* --- Recordings ------------------------------------------------------------ */
+.dm-recs { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--lb-border-color); }
+.dm-recs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 14px; }
+.dm-recs-head .dm-sub { display: inline; }
+.dm-recs-head .dm-delall { margin: 0 0 0 auto !important; align-self: center; }
+.dm-recs > p { margin: 6px 0 0; }
+.dm-reclist { list-style: none; margin: 8px 0 0; padding: 0; }
+.dm-reclist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 14px; align-items: center; padding: 7px 0; font-size: 13px; }
+.dm-reclist li + li { border-top: 1px dashed var(--lb-border-color); }
+.dm-reclist li > .dm-mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-recact { display: flex; gap: 6px; }
+.dm-recact .lb-btn { margin: 0 !important; }
+@media (max-width: 640px) {
+	.dm-reclist li { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Action bar ------------------------------------------------------------ */
+.dm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-top: 22px; padding: 13px 16px;
+	background: var(--lb-card-bg); border: var(--lb-card-border); border-radius: var(--lb-radius); }
+.dm-bar .lb-btn { margin: 0 !important; }
+.dm-sum { margin-right: auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 240px; }
+.dm-sum strong { font-size: 14px; color: var(--lb-text); }
+.dm-sum span { font-size: 12.5px; color: var(--lb-text-secondary); }
+
+/* --- Monitor tab: preview -------------------------------------------------- */
+.dm-monpre { padding: 0 !important; overflow: hidden; }
+.dm-shot { height: 230px; overflow: hidden; padding: 0; background: var(--dmm-bg); color: var(--dmm-text);
+	font-family: var(--lb-font-mono); font-size: 11.5px; line-height: 1.55; display: flex; flex-direction: column; justify-content: flex-end; }
+.dm-shot .ln { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 14px; }
+.dm-shot .ln .t { display: inline-block; width: 12ch; margin-right: 1ch; }
+.dm-monfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; }
+.dm-monfoot .dm-name { font-size: 14px; font-weight: 500; margin-right: auto; }
+.dm-monfoot .lb-btn { margin: 0 !important; }
+
+/* --- Full-screen monitor --------------------------------------------------- */
+:root {
+	--dmm-bg: #0b0e12;
+	--dmm-bar: #12161c;
+	--dmm-line: #1d222b;
+	--dmm-ctl: #1b2027;
+	--dmm-ctl-border: #2a313b;
+	--dmm-text: #cdd3da;
+	--dmm-soft: #aeb6c0;
+	--dmm-muted: #5a6472;
+}
+html.dmm-page, html.dmm-page body { overflow: hidden; }
+.dmm { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; background: var(--dmm-bg); color: var(--dmm-text); }
+.dmm-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: var(--dmm-bar); border-bottom: 1px solid var(--dmm-line); }
+.dmm-state { display: inline-flex; align-items: center; gap: 8px; font-family: var(--lb-font-mono); font-size: 12px; color: var(--dmm-soft); white-space: nowrap; }
+.dmm .dm-dot.off { background: #6b7580; }
+.dmm .dm-dot.on { background: #8bc34a; box-shadow: 0 0 0 3px rgba(139, 195, 74, .25); }
+.dmm .dm-dot.idle { background: #e0b85a; }
+.dmm .dm-dot.bad { background: #e06a6a; }
+.dmm-filter { flex: 1 1 200px; min-width: 0; background: var(--dmm-bg); border: 1px solid var(--dmm-ctl-border); color: var(--dmm-text);
+	border-radius: 7px; padding: 6px 10px; font: inherit; font-size: 13px; }
+.dmm-ip { background: var(--dmm-ctl); border: 1px solid var(--dmm-ctl-border); color: var(--dmm-text); border-radius: 7px;
+	padding: 5px 8px; font: inherit; font-family: var(--lb-font-mono); font-size: 12px; max-width: 13em; }
+.dmm-ip:focus { outline: 2px solid #6dac20; outline-offset: -1px; }
+.dmm-filter:focus { outline: 2px solid #6dac20; outline-offset: -1px; }
+.dmm-types { display: inline-flex; border: 1px solid var(--dmm-ctl-border); border-radius: 7px; overflow: hidden; }
+.dmm-types button { background: var(--dmm-ctl); border: 0; color: var(--dmm-soft); padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.dmm-types button + button { border-left: 1px solid var(--dmm-ctl-border); }
+.dmm-types button[aria-pressed="true"] { background: #6dac20; color: #fff; }
+.dmm-btn { background: var(--dmm-ctl) !important; border: 1px solid var(--dmm-ctl-border) !important; color: var(--dmm-soft) !important;
+	border-radius: 7px !important; padding: 5px 10px !important; font: inherit; font-size: 12px !important; cursor: pointer;
+	display: inline-flex !important; align-items: center; gap: 6px; margin: 0 !important; min-height: 0 !important; line-height: 1.4; }
+.dmm-btn:hover { color: #fff !important; }
+.dmm-btn[aria-pressed="true"] { border-color: #e0b85a !important; color: #e0b85a !important; }
+.dmm-check input { margin: 0; accent-color: #6dac20; }
+.dmm-cnt { font-family: var(--lb-font-mono); font-size: 11.5px; color: #6b7580; white-space: nowrap; }
+.dmm-close { margin-left: auto !important; }
+.dmm-log { flex: 1; overflow: auto; padding: 6px 0; font-family: var(--lb-font-mono); font-size: 12.5px; line-height: 1.5; outline: none; }
+/* Rows span the full width (also when scrolled sideways), colours as in the
+   Loxone Monitor: one colour pair per group, odd lines light, even lines dark */
+.dmm-log .ln { white-space: pre; width: max-content; min-width: 100%; padding: 0 12px; box-sizing: border-box; }
+.dmm-log.wrap .ln { white-space: pre-wrap; word-break: break-word; width: auto; }
+/* Fixed columns as in the Loxone Monitor: the IP column is as wide as the
+   longest address (15 characters), so time and message line up for every
+   Miniserver; one extra character of space after each column */
+.dmm-log .ln .t, .dmm-log .ln .ip { display: inline-block; margin-right: 1ch; white-space: pre; }
+.dmm-log .ln .t { width: 12ch; }
+.dmm-log .ln .ip { width: 15ch; }
+/* Type of the message (LNK, PRG, HTTP32 ...): column of 6 characters plus one
+   extra space; longer types (SEQ_ERROR) simply push the text further right */
+.dmm-log .ln .ty, .dm-shot .ln .ty { display: inline-block; min-width: 6ch; margin-right: 1ch; white-space: pre; }
+.dmm-empty { color: var(--dmm-muted); padding: 20px 12px; }
+.dmm-new { position: absolute; right: 22px; bottom: 18px; background: #e0b85a; color: #1b2027; border: 0; border-radius: 999px;
+	padding: 6px 14px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .4); }
+.c-http { background: #a800ff; color: #ffffff; }
+.c-http.z { background: #8c00f0; }
+.c-tcp { background: #4c4cf0; color: #ffff00; }
+.c-tcp.z { background: #4040c8; }
+.c-udp { background: #f0c0a8; color: #000000; }
+.c-udp.z { background: #c8a08c; }
+.c-ms { background: #f0ffa8; color: #000000; }
+.c-ms.z { background: #c8f08c; }
+.c-dns { background: #fff0ff; color: #000000; }
+.c-dns.z { background: #f0c8f0; }
+.c-seq, .c-seq.z { background: #ffbe8c; color: #000000; }
+/* Binary records do not exist in the Loxone Monitor: muted on the terminal background */
+.c-bin { background: #1b2027; color: #8a939e; }
+.c-bin.z { background: #161a20; }
+/* --- Task monitor window --------------------------------------------------- */
+.tmm-body { flex: 1; display: flex; min-height: 0; }
+.tmm-threads { flex: 1 1 56%; overflow: auto; border-right: 1px solid var(--dmm-line); }
+.tmm-table { width: 100%; border-collapse: collapse; font-family: var(--lb-font-mono); font-size: 12px; color: var(--dmm-text); }
+.tmm-table th { position: sticky; top: 0; background: var(--dmm-bar); color: var(--dmm-soft); font-weight: 600; text-align: left;
+	padding: 5px 8px; border-bottom: 1px solid var(--dmm-line); cursor: pointer; white-space: nowrap; user-select: none; }
+.tmm-table th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+.tmm-table th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; }
+.tmm-table td { padding: 2px 8px; white-space: nowrap; border-bottom: 1px solid #151a21; }
+.tmm-table .num { text-align: right; }
+.tmm-table tbody tr:hover { background: #18202a; }
+.tmm-table tr.hot td { color: #e0b85a; }
+.tmm-empty { color: var(--dmm-muted); padding: 20px 12px !important; }
+/* Right side as in the Loxone Monitor: yellow figures and a green graph on black */
+.tmm-side { flex: 1 1 44%; display: flex; flex-direction: column; min-width: 0; background: #000; }
+.tmm-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; padding: 8px 12px;
+	font-family: var(--lb-font-mono); font-size: 12px; color: #ffff00; border-bottom: 1px solid #0a3a0a; }
+.tmm-colt { color: #c8c8c8; font-weight: 600; padding-bottom: 3px; }
+.tmm-row { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; line-height: 1.6; }
+.tmm-row span { color: #e6e600; }
+.tmm-row b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+.tmm-graph { flex: 1; position: relative; min-height: 160px; }
+.tmm-graph canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tmm-graph-max { position: absolute; right: 6px; top: 2px; color: #fff; font: 11px var(--lb-font-mono); }
+@media (max-width: 900px) {
+	.tmm-body { flex-direction: column; }
+	.tmm-threads { border-right: 0; border-bottom: 1px solid var(--dmm-line); flex-basis: 55%; }
+	.tmm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+	.dmm-types button { padding: 5px 7px; }
+	.dmm-log { font-size: 11.5px; }
+}

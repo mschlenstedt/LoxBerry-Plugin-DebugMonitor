@@ -1,0 +1,143 @@
+<div class="lb-content" id="dm-page" data-form="start">
+
+<h2 class="dm-title"><TMPL_VAR START.TITLE></h2>
+<p class="dm-lead"><TMPL_VAR START.LEAD> <a href="<TMPL_VAR WIKI_URL>" target="_blank" rel="noopener"><TMPL_VAR COMMON.MORE></a></p>
+
+<!-- Status card -->
+<div class="lb-card dm-card dm-status">
+	<div>
+		<span class="dm-k"><TMPL_VAR START.CARD_MONITOR></span>
+		<span class="dm-name" id="st-state"><span class="dm-dot"></span> …</span>
+		<span class="dm-pill" id="st-since" hidden></span>
+	</div>
+	<div>
+		<span class="dm-k"><TMPL_VAR START.CARD_PORT></span>
+		<span class="dm-v dm-mono" id="st-port">–</span>
+	</div>
+	<div>
+		<span class="dm-k"><TMPL_VAR START.CARD_PACKETS></span>
+		<span class="dm-v" id="st-packets">–</span>
+		<span class="dm-sub" id="st-fwd"></span>
+	</div>
+	<div>
+		<span class="dm-k"><TMPL_VAR START.CARD_LAST></span>
+		<span class="dm-v" id="st-last">–</span>
+		<span class="dm-sub" id="st-src"></span>
+	</div>
+</div>
+
+<!-- What to set in Loxone Config -->
+<div class="lb-callout dm-callout">
+	<span class="lb-callout-title"><TMPL_VAR START.CFG_TITLE></span>
+	<ol>
+		<li><TMPL_VAR START.CFG_STEP1></li>
+		<li><TMPL_VAR START.CFG_STEP2>
+			<span class="dm-tgts">
+				<span class="dm-tgtfld"><span class="dm-k"><TMPL_VAR START.CFG_IP></span>
+				<span class="dm-tgt"><span id="cfg-ip"><TMPL_VAR LBIP></span>
+				<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cfg-ip" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></span></span>
+				<span class="dm-tgtfld"><span class="dm-k"><TMPL_VAR START.CFG_PORT></span>
+				<span class="dm-tgt"><span id="cfg-port">…</span>
+				<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cfg-port" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></span></span>
+			</span></li>
+		<li><TMPL_VAR START.CFG_STEP3></li>
+	</ol>
+	<p class="dm-hint"><TMPL_VAR START.CFG_OFF></p>
+</div>
+
+<!-- Receive -->
+<h3 class="dm-sect"><TMPL_VAR START.SECT_RECEIVE></h3>
+<div class="dm-portrow">
+	<div class="dm-fld">
+		<label class="dm-k" for="f-port"><TMPL_VAR START.PORT></label>
+		<input class="lb-input dm-mono" id="f-port" inputmode="numeric" autocomplete="off" maxlength="5">
+	</div>
+	<button type="button" class="lb-btn" id="btn-check"><i class="pi pi-search"></i> <TMPL_VAR START.PORT_CHECK></button>
+	<span id="port-result"></span>
+</div>
+<p class="dm-help"><TMPL_VAR START.PORT_HELP></p>
+
+<!-- Recording -->
+<h3 class="dm-sect"><TMPL_VAR START.SECT_RECORD></h3>
+<div class="lb-card dm-set">
+	<div class="dm-switchrow">
+		<label class="lb-toggle"><input type="checkbox" id="f-rec"><span class="lb-toggle-slider"></span></label>
+		<label for="f-rec" class="dm-switchlabel"><TMPL_VAR START.REC_ON></label>
+	</div>
+	<p class="dm-help"><TMPL_VAR START.REC_HELP></p>
+	<div id="rec-opts">
+		<TMPL_VAR STORAGE_HTML>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="f-flush"><TMPL_VAR START.REC_FLUSH></label>
+			<div class="lb-form-field">
+				<select class="lb-select dm-auto" id="f-flush">
+					<option value="15"><TMPL_VAR START.MIN_15></option>
+					<option value="30"><TMPL_VAR START.MIN_30></option>
+					<option value="60"><TMPL_VAR START.MIN_60></option>
+					<option value="120"><TMPL_VAR START.MIN_120></option>
+					<option value="240"><TMPL_VAR START.MIN_240></option>
+				</select>
+			</div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="f-keepmb"><TMPL_VAR START.REC_KEEP_MB></label>
+			<div class="lb-form-field"><input class="lb-input dm-num" id="f-keepmb" inputmode="numeric"></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="f-keepdays"><TMPL_VAR START.REC_KEEP_DAYS></label>
+			<div class="lb-form-field"><input class="lb-input dm-num" id="f-keepdays" inputmode="numeric"></div>
+		</div>
+		<div class="lb-form-help hint"><TMPL_VAR START.REC_KEEP_HELP></div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="f-csvmin"><TMPL_VAR START.REC_CSV></label>
+			<div class="lb-form-field">
+				<select class="lb-select dm-auto" id="f-csvmin">
+					<option value="0"><TMPL_VAR START.CSV_OFF></option>
+					<option value="1"><TMPL_VAR START.CSV_1></option>
+					<option value="5"><TMPL_VAR START.CSV_5></option>
+					<option value="15"><TMPL_VAR START.CSV_15></option>
+					<option value="60"><TMPL_VAR START.CSV_60></option>
+				</select>
+			</div>
+		</div>
+		<div class="lb-form-help hint"><TMPL_VAR START.REC_CSV_HELP></div>
+
+		<div class="dm-recs">
+			<div class="dm-recs-head"><strong><TMPL_VAR START.REC_LIST></strong> <span class="dm-sub" id="rec-sum"></span>
+				<button type="button" class="lb-btn lb-btn-sm dm-delall" id="btn-delall" hidden><i class="pi pi-trash"></i> <span><TMPL_VAR START.REC_DELETE_ALL></span></button></div>
+			<p class="dm-sub" id="rec-ram" hidden></p>
+			<p class="dm-sub dm-err" id="rec-err" hidden></p>
+			<ul class="dm-reclist" id="rec-list"></ul>
+		</div>
+	</div>
+</div>
+
+<!-- Forward -->
+<h3 class="dm-sect"><TMPL_VAR START.SECT_FORWARD></h3>
+<div class="lb-card dm-set">
+	<div class="dm-switchrow">
+		<label class="lb-toggle"><input type="checkbox" id="f-fwd"><span class="lb-toggle-slider"></span></label>
+		<label for="f-fwd" class="dm-switchlabel"><TMPL_VAR START.FWD_ON></label>
+	</div>
+	<p class="dm-help"><TMPL_VAR START.FWD_HELP></p>
+	<div class="dm-portrow" id="fwd-opts">
+		<div class="dm-fld">
+			<label class="dm-k" for="f-fwdhost"><TMPL_VAR START.FWD_HOST></label>
+			<input class="lb-input dm-mono dm-host" id="f-fwdhost" autocomplete="off" placeholder="192.168.1.50">
+		</div>
+		<div class="dm-fld">
+			<label class="dm-k" for="f-fwdport"><TMPL_VAR START.FWD_PORT></label>
+			<input class="lb-input dm-mono" id="f-fwdport" inputmode="numeric" maxlength="5">
+		</div>
+	</div>
+</div>
+
+<!-- Action bar -->
+<div class="dm-bar" id="dm-bar">
+	<div class="dm-sum"><strong id="bar-title">…</strong><span id="bar-text"></span></div>
+	<button type="button" class="lb-btn" id="btn-save"><i class="pi pi-save"></i> <TMPL_VAR START.SAVE></button>
+	<button type="button" class="lb-btn lb-btn-primary" id="btn-start"><i class="pi pi-play"></i> <TMPL_VAR START.START></button>
+	<button type="button" class="lb-btn lb-btn-danger" id="btn-stop"><i class="pi pi-stop"></i> <TMPL_VAR START.STOP></button>
+</div>
+
+</div>

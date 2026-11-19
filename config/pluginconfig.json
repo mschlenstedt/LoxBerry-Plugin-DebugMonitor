@@ -1,0 +1,15 @@
+{
+   "port" : 7777,
+   "record" : {
+      "enabled" : 1,
+      "path" : "",
+      "flush_min" : 60,
+      "keep_mb" : 1024,
+      "keep_days" : 30
+   },
+   "forward" : {
+      "enabled" : 0,
+      "host" : "",
+      "port" : 7777
+   }
+}

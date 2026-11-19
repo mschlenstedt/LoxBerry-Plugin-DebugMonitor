@@ -1,0 +1,12 @@
+<div class="lb-content" id="dm-page" data-form="logs">
+
+<h2 class="dm-title"><TMPL_VAR LOGS.TITLE></h2>
+<p class="dm-lead"><TMPL_VAR LOGS.LEAD></p>
+
+<TMPL_IF LOGLIST>
+<TMPL_VAR LOGLIST>
+<TMPL_ELSE>
+<div class="lb-callout"><TMPL_VAR LOGS.NONE></div>
+</TMPL_IF>
+
+</div>

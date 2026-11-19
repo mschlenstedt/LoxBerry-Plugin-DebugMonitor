@@ -1,0 +1,25 @@
+#!/bin/bash
+# Runs as root during the uninstallation, before the plugin folders are deleted.
+# Installed as data/system/uninstall/<NAME> below the LoxBerry home directory,
+# so the own file name is the plugin name.
+#
+# Stops the receiver of this plugin and removes its RAM directory. The
+# recordings on an external storage stay where they are - they belong to the user.
+
+PLUGINNAME=$(basename "$0")
+
+for pid in $(pgrep -f "dmon_receiver.py|dmon_mcp.py"); do
+	CMD=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+	case "$CMD" in
+		*"/bin/plugins/$PLUGINNAME/dmon_receiver.py"*|*"/bin/plugins/$PLUGINNAME/dmon_mcp.py"*)
+			kill -TERM "$pid" 2>/dev/null
+			for i in $(seq 1 50); do
+				kill -0 "$pid" 2>/dev/null || break
+				sleep 0.2
+			done
+			kill -KILL "$pid" 2>/dev/null
+			;;
+	esac
+done
+rm -rf "/dev/shm/$PLUGINNAME"
+exit 0

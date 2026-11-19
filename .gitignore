@@ -1,0 +1,12 @@
+# Development material - never part of the repository or the plugin archive
+ERKENNTNISSE.md
+CLAUDE.md
+entwurf/
+mitschnitte/
+werkzeuge/
+tests/
+docs/superpowers/
+.superpowers/
+__pycache__/
+*.pyc
+*.zip

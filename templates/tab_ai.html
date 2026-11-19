@@ -1,0 +1,72 @@
+<div class="lb-content" id="dm-page" data-form="ai">
+
+<h2 class="dm-title"><TMPL_VAR AI.TITLE></h2>
+<p class="dm-lead"><TMPL_VAR AI.LEAD></p>
+
+<!-- Server -->
+<h3 class="dm-sect"><TMPL_VAR AI.SECT_SERVER></h3>
+<div class="lb-card dm-set">
+	<div class="dm-switchrow">
+		<label class="lb-toggle"><input type="checkbox" id="f-mcp"><span class="lb-toggle-slider"></span></label>
+		<label for="f-mcp" class="dm-switchlabel"><TMPL_VAR AI.ON></label>
+		<span class="dm-pill" id="mcp-state">…</span>
+	</div>
+	<div class="dm-portrow">
+		<div class="dm-fld">
+			<label class="dm-k" for="f-mcpport"><TMPL_VAR AI.PORT></label>
+			<input class="lb-input dm-mono" id="f-mcpport" inputmode="numeric" autocomplete="off" maxlength="5">
+		</div>
+		<button type="button" class="lb-btn" id="btn-mcpcheck"><i class="pi pi-search"></i> <TMPL_VAR START.PORT_CHECK></button>
+		<button type="button" class="lb-btn lb-btn-primary" id="btn-mcpsave"><i class="pi pi-save"></i> <TMPL_VAR START.SAVE></button>
+		<!-- Results after the buttons, so nothing moves when they appear -->
+		<span id="mcpport-result"></span>
+		<span id="mcp-msg" class="dm-sub"></span>
+	</div>
+	<p class="dm-help"><TMPL_VAR AI.PORT_HELP></p>
+	<div class="dm-fld dm-tokenrow">
+		<span class="dm-k"><TMPL_VAR AI.TOKEN></span>
+		<span class="dm-tgt dm-token"><span id="mcp-token">–</span>
+			<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="mcp-token" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></span>
+		<button type="button" class="lb-btn lb-btn-sm" id="btn-mcptoken"><i class="pi pi-refresh"></i> <TMPL_VAR AI.TOKEN_NEW></button>
+	</div>
+	<p class="dm-help"><TMPL_VAR AI.TOKEN_HELP></p>
+</div>
+
+<!-- Connect -->
+<h3 class="dm-sect"><TMPL_VAR AI.SECT_CONNECT></h3>
+<div class="lb-card dm-set">
+	<p class="dm-k"><TMPL_VAR AI.CC_HTTP></p>
+	<div class="dm-cmd"><code id="cmd-http">…</code>
+		<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cmd-http" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></div>
+	<p class="dm-k"><TMPL_VAR AI.CC_JSON></p>
+	<div class="dm-cmd"><code id="cmd-json">…</code>
+		<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cmd-json" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></div>
+	<p class="dm-k"><TMPL_VAR AI.CC_SSH></p>
+	<div class="dm-cmd"><code id="cmd-ssh"><TMPL_VAR MCP_SSH_CMD></code>
+		<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cmd-ssh" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></div>
+	<p class="dm-help"><TMPL_VAR AI.SSH_HELP></p>
+</div>
+
+<!-- Tools -->
+<h3 class="dm-sect"><TMPL_VAR AI.SECT_TOOLS></h3>
+<div class="lb-card dm-set">
+	<ul class="dm-tools">
+		<li><code>miniserver_status</code> <TMPL_VAR AI.T_STATUS></li>
+		<li><code>miniserver_list_recordings</code> <TMPL_VAR AI.T_LIST></li>
+		<li><code>miniserver_search</code> <TMPL_VAR AI.T_SEARCH></li>
+		<li><code>miniserver_context</code> <TMPL_VAR AI.T_CONTEXT></li>
+		<li><code>miniserver_http_requests</code> <TMPL_VAR AI.T_HTTP></li>
+		<li><code>miniserver_summary</code> <TMPL_VAR AI.T_SUMMARY></li>
+		<li><code>miniserver_taskmon</code> <TMPL_VAR AI.T_TASKMON></li>
+		<li><code>miniserver_resources</code> <TMPL_VAR AI.T_RESOURCES></li>
+		<li><code>miniserver_live_tail</code> <TMPL_VAR AI.T_LIVE></li>
+	</ul>
+	<p class="dm-help"><TMPL_VAR AI.EXAMPLE></p>
+</div>
+
+<div class="lb-callout dm-callout">
+	<span class="lb-callout-title"><TMPL_VAR AI.SAFETY_T></span>
+	<p class="dm-hint"><TMPL_VAR AI.SAFETY></p>
+</div>
+
+</div>
