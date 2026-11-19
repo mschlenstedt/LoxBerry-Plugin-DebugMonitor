@@ -137,6 +137,7 @@ html.dmm-page, html.dmm-page body { overflow: hidden; }
 	border-radius: 7px; padding: 6px 10px; font: inherit; font-size: 13px; }
 .dmm-ip { background: var(--dmm-ctl); border: 1px solid var(--dmm-ctl-border); color: var(--dmm-text); border-radius: 7px;
 	padding: 5px 8px; font: inherit; font-family: var(--lb-font-mono); font-size: 12px; max-width: 13em; }
+.tmm .dmm-ip { max-width: none; min-width: 11em; }
 .dmm-ip:focus { outline: 2px solid #6dac20; outline-offset: -1px; }
 .dmm-filter:focus { outline: 2px solid #6dac20; outline-offset: -1px; }
 .dmm-types { display: inline-flex; border: 1px solid var(--dmm-ctl-border); border-radius: 7px; overflow: hidden; }

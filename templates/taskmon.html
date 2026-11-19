@@ -177,7 +177,8 @@
 			return k(a) < k(b) ? -1 : 1;
 		});
 		if (ips.join() !== Array.prototype.map.call(sel.options, function (o) { return o.value; }).join()) {
-			sel.innerHTML = ips.map(function (ip) { return '<option value="' + esc(ip) + '">' + esc(fmt(T.MS, ip)) + '</option>'; }).join('');
+			// The window title already says "task monitor": the box shows the IP only
+			sel.innerHTML = ips.map(function (ip) { return '<option value="' + esc(ip) + '">' + esc(ip) + '</option>'; }).join('');
 		}
 		if (!ips.length) {
 			rowsEl.innerHTML = '<tr><td colspan="8" class="tmm-empty">' + esc(T.WAIT) + '</td></tr>';
