@@ -29,6 +29,7 @@ import datetime
 import gzip
 import json
 import os
+import re
 import signal
 import socket
 import struct
@@ -179,6 +180,58 @@ def decode(data, recv_ts):
         return t, ip, text, kind
     t = datetime.datetime.fromtimestamp(recv_ts)
     return t, None, "[raw " + str(len(data)) + " B] " + data[:96].hex(" "), None
+
+
+class HttpSenders:
+    """Who is behind an HTTP line of the Miniserver. Its status line ("HTTP13
+    401 Unauthorized") names no caller; the caller is in an earlier line of the
+    same connection: "TCP socket accept (<ip> <port>/<source port>)" (older
+    firmware: "TCP n accept listen port <port> (from <ip>/<source port>)"),
+    then "HTTP Client HTTP13 connected, Socket s Port <source port>" and
+    "HTTP13 Line User-Agent: ...". Needs monitor level 3. Same logic as the
+    MCP server, but live, so the monitor window can show the caller."""
+
+    RE_ACCEPT = re.compile(r"TCP socket accept \((\d+\.\d+\.\d+\.\d+) (\d+)/(\d+)\)")
+    RE_ACCEPT_OLD = re.compile(r"accept listen port (\d+) \(from (\d+\.\d+\.\d+\.\d+)/(\d+)\)")
+    RE_CONN = re.compile(r"HTTP Client (HTTP\d+) connected, Socket \d+ Port (\d+)")
+    RE_UA = re.compile(r"(HTTP\d+) Line User-Agent: ?(.*)")
+    RE_LINE = re.compile(r"(HTTP\d+) ")
+    MAX_ACCEPT = 4096
+
+    def __init__(self):
+        self.accept = {}       # (ms, source port) -> "ip:port", insertion ordered
+        self.sess = {}         # (ms, HTTPn) -> {"c": "ip:port", "ua": ...}
+
+    def feed(self, ms, text):
+        """Returns {"src": caller, "ua": user agent} for HTTP lines, else None."""
+        m = self.RE_ACCEPT.search(text)
+        if m:
+            self._remember(ms, m.group(3), f"{m.group(1)}:{m.group(2)}")
+            return None
+        m = self.RE_ACCEPT_OLD.search(text)
+        if m:
+            self._remember(ms, m.group(3), f"{m.group(2)}:{m.group(1)}")
+            return None
+        m = self.RE_CONN.match(text)
+        if m:
+            caller = self.accept.pop((ms, m.group(2)), "")
+            self.sess[(ms, m.group(1))] = {"c": caller, "ua": ""}
+            return {"src": caller} if caller else None
+        m = self.RE_UA.match(text)
+        if m and (ms, m.group(1)) in self.sess:
+            self.sess[(ms, m.group(1))]["ua"] = m.group(2).strip()
+            return None
+        m = self.RE_LINE.match(text)
+        if m:
+            sess = self.sess.get((ms, m.group(1)))
+            if sess and sess["c"]:
+                return {"src": sess["c"], "ua": sess["ua"]} if sess["ua"] else {"src": sess["c"]}
+        return None
+
+    def _remember(self, ms, srcport, caller):
+        self.accept[(ms, srcport)] = caller
+        while len(self.accept) > self.MAX_ACCEPT:
+            self.accept.pop(next(iter(self.accept)))
 
 
 class TaskMon:
@@ -464,6 +517,7 @@ class Receiver:
         self.sources = {}
         # Per Miniserver: message counter state (bytes 8-9) and swaps seen
         self.msg_seq = {}
+        self.http = HttpSenders()
         self.missing = {}
         self.started = time.time()
         self.live_buf = []
@@ -685,7 +739,7 @@ class Receiver:
                     if kind is not None and kind >= 0xFF00:
                         self.tm.feed(ip, kind, data, now)
                     self.seq += 1
-                    self.live_buf.append(json.dumps({
+                    line = {
                         "s": self.seq,
                         "d": t.strftime("%Y-%m-%d"),
                         "t": t.strftime("%H:%M:%S.") + f"{t.microsecond // 1000:03d}",
@@ -693,7 +747,13 @@ class Receiver:
                         "k": kind,
                         "b": 0 if kind == 0 else 1,
                         "m": text,
-                    }, ensure_ascii=False) + "\n")
+                    }
+                    if kind == 0:
+                        # Caller of an HTTP line (src) and its user agent (ua)
+                        who = self.http.feed(ip, text)
+                        if who:
+                            line.update(who)
+                    self.live_buf.append(json.dumps(line, ensure_ascii=False) + "\n")
                 if now >= next_live:
                     self._flush_live()
                     next_live = now + LIVE_EVERY

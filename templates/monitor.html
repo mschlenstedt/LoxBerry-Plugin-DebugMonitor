@@ -87,11 +87,20 @@
 		if (l.c === 'bin' && !showBin) return false;
 		if (type && !ofType(l, type)) return false;
 		if (!filter) return true;
-		return (l.t + ' ' + l.ip + ' ' + l.m).toLowerCase().indexOf(filter) >= 0;
+		return (l.t + ' ' + l.ip + ' ' + l.m + ' ' + (l.src || '') + ' ' + (l.ua || '')).toLowerCase().indexOf(filter) >= 0;
 	}
 	function row(l) {
 		return '<div class="ln c-' + l.c + (l.z ? ' z' : '') + '"><span class="t">' + esc(l.t || '            ') + '</span> <span class="ip">' + esc(l.ip) +
-			'</span> ' + msg(l.m) + '</div>';
+			'</span> ' + msg(l.m) + from(l) + '</div>';
+	}
+	// Caller of an HTTP line, found by the receiver from the connection's earlier
+	// lines (the Miniserver names it only there). The status line also gets the
+	// user agent, so a 401 shows who was turned away and with which program.
+	var RE_STATUS = /^HTTP\d+ [1-5]\d\d\b/;
+	function from(l) {
+		if (!l.src) return '';
+		var ua = l.ua && RE_STATUS.test(l.m) ? ' · ' + l.ua : '';
+		return '<span class="from">  ← ' + esc(l.src + ua) + '</span>';
 	}
 	// The type at the start of a message (LNK, PRG, TCP, HTTP32, mDNS ...) gets a
 	// column of its own, so the text right of it starts with some space
