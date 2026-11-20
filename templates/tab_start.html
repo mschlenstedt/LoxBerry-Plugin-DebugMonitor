@@ -26,24 +26,10 @@
 	</div>
 </div>
 
-<!-- What to set in Loxone Config -->
-<div class="lb-callout dm-callout">
-	<span class="lb-callout-title"><TMPL_VAR START.CFG_TITLE></span>
-	<ol>
-		<li><TMPL_VAR START.CFG_STEP1></li>
-		<li><TMPL_VAR START.CFG_STEP2>
-			<span class="dm-tgts">
-				<span class="dm-tgtfld"><span class="dm-k"><TMPL_VAR START.CFG_IP></span>
-				<span class="dm-tgt"><span id="cfg-ip"><TMPL_VAR LBIP></span>
-				<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cfg-ip" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></span></span>
-				<span class="dm-tgtfld"><span class="dm-k"><TMPL_VAR START.CFG_PORT></span>
-				<span class="dm-tgt"><span id="cfg-port">…</span>
-				<button type="button" class="lb-btn lb-btn-sm dm-copy" data-copy="cfg-port" title="<TMPL_VAR START.COPY>"><i class="pi pi-copy"></i></button></span></span>
-			</span></li>
-		<li><TMPL_VAR START.CFG_STEP3></li>
-	</ol>
-	<p class="dm-hint"><TMPL_VAR START.CFG_OFF></p>
-</div>
+<!-- Debug output of the Miniservers, switched like in Loxone Config -->
+<h3 class="dm-sect"><TMPL_VAR START.MS_TITLE></h3>
+<p class="dm-help dm-mshelp"><TMPL_VAR START.MS_HELP> <a href="<TMPL_VAR WIKI_URL>#einstellungen_in_loxone_config_optional" target="_blank" rel="noopener"><TMPL_VAR START.MS_CONFIG></a></p>
+<div id="ms-list" class="dm-mslist"></div>
 
 <!-- Receive -->
 <h3 class="dm-sect"><TMPL_VAR START.SECT_RECEIVE></h3>

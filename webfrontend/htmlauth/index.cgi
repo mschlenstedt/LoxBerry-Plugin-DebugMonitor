@@ -45,6 +45,7 @@ $templateout->param(
 	FORM       => $q->{form},
 	LBIP       => ( DebugMonitor::local_ip() // '' ),
 	JS_STRINGS => js_strings( \%L, 'JS' ),
+	MS_JSON    => js_json( $q->{form} eq 'start' ? DebugMonitor::miniservers() : [] ),
 	CFG_JSON   => js_json( {
 		%$cfg,
 		default_recdir => DebugMonitor::default_recdir(),

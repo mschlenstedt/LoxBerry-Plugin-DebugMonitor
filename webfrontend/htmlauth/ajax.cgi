@@ -66,6 +66,11 @@ if ( $action eq 'taskmon' ) {
 	out( { ok => 1, running => ( DebugMonitor::receiver_pid() ? 1 : 0 ), data => $data } );
 }
 
+# Debug output of one Miniserver, as the Miniserver reports it
+if ( $action eq 'msdebug' ) {
+	out( DebugMonitor::msdebug( $q->{ms} // '', 'query' ) );
+}
+
 if ( $action eq 'mcpportcheck' ) {
 	out( { ok => 1, result => DebugMonitor::tcp_port_check( $q->{port} ) } );
 }
@@ -211,6 +216,26 @@ if ( $action eq 'mcptoken' ) {
 	$l->LOGEND('done');
 	DebugMonitor::mcp_start() if ( DebugMonitor::mcp_pid() );
 	out( { ok => 1, token => $cfg->{mcp}{token} } );
+}
+
+# Switch the debug output of one Miniserver
+if ( $action eq 'msdebugset' ) {
+	my $on = $q->{on} ? 1 : 0;
+	my $r  = DebugMonitor::msdebug( $q->{ms} // '', $on ? 'set' : 'off', $q->{level}, $q->{days} );
+	my $l  = weblog('Miniserver debug output');
+	my $ms = ( grep { $_->{nr} eq ( $q->{ms} // '' ) } @{ DebugMonitor::miniservers() } )[0] // {};
+	my $who = "Miniserver $ms->{name} ($ms->{ip})";
+	if ( !$r->{ok} ) {
+		$l->ERR( "$who: switching " . ( $on ? 'on' : 'off' ) . " failed: $r->{error}" . ( $r->{detail} ? " ($r->{detail})" : '' ) );
+	}
+	elsif ($on) {
+		$l->OK("$who sends its debug messages to $r->{target}, level $r->{level}, until " . localtime( $r->{until} ));
+	}
+	else {
+		$l->OK("$who: debug messages switched off");
+	}
+	$l->LOGEND('done');
+	out($r);
 }
 
 if ( $action eq 'deleteall' ) {

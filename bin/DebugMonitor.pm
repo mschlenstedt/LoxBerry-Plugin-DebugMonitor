@@ -20,6 +20,7 @@ use LoxBerry::System;
 
 our $RECEIVER = 'dmon_receiver.py';
 our $MCP      = 'dmon_mcp.py';
+our $MSDEBUG  = 'dmon_msdebug.py';
 our $REC_RE   = qr/^dm_\d{8}_\d{6}(?:_crash)?\.raw\.gz$/;
 # Task monitor figures, one file per Miniserver and month
 our $CSV_RE   = qr/^taskmon_\d{1,3}(?:\.\d{1,3}){3}_\d{4}-\d{2}\.csv$/;
@@ -709,6 +710,108 @@ sub local_ip
 	return $ip if ( $ip and $ip ne '0.0.0.0' );
 	my $all = qx(hostname -I 2>/dev/null) // '';
 	return ( $all =~ /(\d+\.\d+\.\d+\.\d+)/ ) ? $1 : undef;
+}
+
+##########################################################################
+# Debug output of the Miniservers, switched from here like Loxone Config
+##########################################################################
+
+# What the plugin switched last, per Miniserver number. The Miniserver itself
+# does not report the expiry, so we keep it from its confirmation.
+sub msdebug_file { return "$lbpconfigdir/msdebug.json"; }
+
+sub _msdebug_load
+{
+	my $d = {};
+	if ( open( my $fh, '<', msdebug_file() ) ) {
+		local $/;
+		$d = eval { JSON::from_json(<$fh>) } // {};
+		close $fh;
+	}
+	return ref($d) eq 'HASH' ? $d : {};
+}
+
+sub _msdebug_save
+{
+	my ($d) = @_;
+	my $file = msdebug_file();
+	open( my $fh, '>', "$file.tmp" ) or return undef;
+	print $fh JSON->new->pretty->canonical(1)->encode($d);
+	close($fh) or return undef;
+	return rename( "$file.tmp", $file );
+}
+
+# The Miniservers of this LoxBerry, without credentials
+sub miniservers
+{
+	my %ms = LoxBerry::System::get_miniservers();
+	return [ map { { nr => $_, name => $ms{$_}{Name} // "Miniserver $_", ip => $ms{$_}{IPAddress} // '' } }
+		sort { $a <=> $b } keys %ms ];
+}
+
+# Where the Miniservers are to send: this LoxBerry, our receive port
+sub msdebug_target
+{
+	my $ip = local_ip() // return undef;
+	return $ip . ':' . load_config()->{port};
+}
+
+# action: query, set (level 1-3, days 1-7) or off. Returns the hash from
+# dmon_msdebug.py, plus "self" (sends to us) and the expiry we know of.
+sub msdebug
+{
+	my ( $nr, $action, $level, $days ) = @_;
+	my %ms = LoxBerry::System::get_miniservers();
+	my $m  = $ms{$nr} // return { ok => 0, error => 'nominiserver' };
+	my $target = msdebug_target() // return { ok => 0, error => 'noip' };
+	my $tls = ( $m->{PreferHttps} // 0 ) ? 1 : 0;
+	my $in  = {
+		host   => $m->{IPAddress},
+		port   => ( $tls ? $m->{PortHttps} || 443 : $m->{Port} || 80 ) + 0,
+		tls    => $tls,
+		user   => $m->{Admin_RAW},
+		pass   => $m->{Pass_RAW},
+		action => $action,
+	};
+	if ( $action eq 'set' ) {
+		$level = _int_in( $level, 1, 3 ) // return { ok => 0, error => 'badvalue' };
+		$days  = _int_in( $days,  1, 7 ) // return { ok => 0, error => 'badvalue' };
+		@$in{qw(level days target)} = ( $level, $days, $target );
+	}
+	require IPC::Open2;
+	my ( $out, $to );
+	my $pid = eval { IPC::Open2::open2( $out, $to, 'python3', "$lbpbindir/$MSDEBUG" ) };
+	return { ok => 0, error => 'msinternal', detail => "$@" } if ( !$pid );
+	print $to JSON::to_json($in);
+	close $to;
+	my $raw = do { local $/; <$out> } // '';
+	close $out;
+	waitpid( $pid, 0 );
+	my $r = eval { JSON::from_json($raw) };
+	return { ok => 0, error => 'msinternal', detail => substr( $raw, 0, 200 ) } if ( ref($r) ne 'HASH' );
+	return $r if ( !$r->{ok} );
+
+	my $known = _msdebug_load();
+	my $k     = $known->{$nr} //= {};
+	if ( $action eq 'set' ) {
+		%$k = ( ip => $m->{IPAddress}, target => $r->{target}, level => $level, days => $days, until => $r->{until} );
+		_msdebug_save($known);
+	}
+	elsif ( exists $k->{until} and ( !$r->{on} or ( $r->{days} and $r->{days} != ( $k->{days} // 0 ) ) ) ) {
+		# Switched off, or switched again with another duration (Loxone Config):
+		# the expiry we kept no longer applies. Level and days stay as defaults.
+		delete $k->{until};
+		_msdebug_save($known);
+	}
+	$r->{self} = ( $r->{on} and $r->{target} eq $target ) ? 1 : 0;
+	$r->{until} ||= $k->{until} if ( $r->{on} and ( $k->{target} // '' ) eq $r->{target} and ( $k->{until} // 0 ) > time() );
+	$r->{until} ||= 0;
+	$r->{days}  ||= $days // 0;
+	# Preselection: what the Miniserver does now, else the last choice for it,
+	# else level 3 for 1 day
+	$r->{want_level} = $r->{on} ? $r->{level} : $k->{level} // 3;
+	$r->{want_days}  = $r->{on} && $r->{days} ? $r->{days} : $k->{days} // 1;
+	return $r;
 }
 
 ##########################################################################

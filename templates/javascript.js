@@ -4,6 +4,7 @@
 	var L = <TMPL_VAR JS_STRINGS>;
 	var CFG = <TMPL_VAR CFG_JSON>;
 	var LBIP = '<TMPL_VAR LBIP ESCAPE=JS>';
+	var MS = <TMPL_VAR MS_JSON>;
 	var page = document.getElementById('dm-page');
 	if (!page) return;
 	var form = page.dataset.form;
@@ -218,7 +219,6 @@
 		f.fwdhost.value = c.forward.host;
 		f.fwdport.value = c.forward.port;
 		toggles();
-		target();
 	}
 	function recpath() {
 		var el = $('recpath');
@@ -248,10 +248,6 @@
 		$('rec-opts').classList.toggle('dm-off', !f.rec.checked);
 		$('fwd-opts').classList.toggle('dm-off', !f.fwd.checked);
 	}
-	function target() {
-		$('cfg-ip').textContent = LBIP || '?';
-		$('cfg-port').textContent = f.port.value.trim() || '…';
-	}
 
 	// The storage widget fills its hidden field after loading; take the
 	// "saved" snapshot only then, otherwise the page starts out dirty.
@@ -259,7 +255,7 @@
 	setTimeout(function () { saved = JSON.stringify(collect()); bar(); }, 1500);
 
 	page.addEventListener('input', function (e) {
-		if (e.target === f.port) { target(); $('port-result').innerHTML = ''; }
+		if (e.target === f.port) { $('port-result').innerHTML = ''; }
 		bar();
 	});
 	page.addEventListener('change', function () { toggles(); bar(); });
@@ -331,7 +327,7 @@
 	}
 	function poll() {
 		api('status').then(function (d) {
-			if (d.ok) { last = d; card(d); bar(); }
+			if (d.ok) { last = d; card(d); bar(); msWatch(d); }
 		});
 	}
 
@@ -467,6 +463,89 @@
 			setTimeout(function () { lastRecs = ''; recordings(); }, 500);
 		});
 	});
+
+	// --- Debug output of the Miniservers -------------------------------------
+	// One card per Miniserver: what it does now, level and duration, switch.
+	// The receiver sees who sends. If that does not match a card - a Miniserver
+	// sends although its card says otherwise, or its card says it sends to us
+	// and nothing came for 30 s - the card asks the Miniserver again, once per
+	// change. That catches switching in Loxone Config and the expiry.
+	var MSS = {};
+	function msWatch(d) {
+		var src = {};
+		((d.receiver || {}).sources || []).forEach(function (s) { src[s.ip] = s.last; });
+		MS.forEach(function (m) {
+			var s = MSS[m.nr];
+			if (!s) return;
+			s.active = !!(d.running && src[m.ip] && d.now - src[m.ip] < 30);
+			if (s.busy || s.active === !!(s.on && s.self) || s.activeAtQuery === s.active) return;
+			s.query();
+		});
+	}
+	function msCards() {
+		var box = $('ms-list');
+		if (!MS.length) { box.innerHTML = '<p class="dm-help">' + esc(L.MS_NONE) + '</p>'; return; }
+		var opts = function (vals, label) {
+			return vals.map(function (v) { return '<option value="' + v + '">' + esc(label(v)) + '</option>'; }).join('');
+		};
+		box.innerHTML = MS.map(function (m) {
+			var id = 'ms' + m.nr;
+			return '<div class="lb-card dm-set dm-ms" id="' + id + '">' +
+				'<div class="dm-mshead"><span class="dm-name">' + esc(m.name) + '</span><span class="dm-mono dm-sub">' + esc(m.ip) + '</span>' +
+				'<span class="dm-msstate" id="' + id + '-st">' + dot('') + esc(L.MS_QUERY) + '</span>' +
+				'<button type="button" class="lb-btn lb-btn-sm dm-msre" id="' + id + '-re" title="' + esc(L.MS_REFRESH) + '"><i class="pi pi-refresh"></i></button></div>' +
+				'<div class="dm-portrow">' +
+				'<div class="dm-fld"><label class="dm-k" for="' + id + '-lv">' + esc(L.MS_LEVEL) + '</label><select class="lb-select dm-auto" id="' + id + '-lv">' +
+				opts([1, 2, 3], function (v) { return v === 1 ? L.MS_LEVEL_1 : v === 3 ? L.MS_LEVEL_3 : String(v); }) + '</select></div>' +
+				'<div class="dm-fld"><label class="dm-k" for="' + id + '-dy">' + esc(L.MS_DAYS) + '</label><select class="lb-select dm-auto" id="' + id + '-dy">' +
+				opts([1, 2, 3, 4, 5, 6, 7], function (v) { return v === 1 ? L.MS_DAY : fmt(L.MS_DAYS_N, v); }) + '</select></div>' +
+				'<button type="button" class="lb-btn lb-btn-primary" id="' + id + '-on"><i class="pi pi-play"></i> <span>' + esc(L.MS_ON) + '</span></button>' +
+				'<button type="button" class="lb-btn" id="' + id + '-off"><i class="pi pi-power-off"></i> ' + esc(L.MS_OFF) + '</button>' +
+				'</div><p class="dm-help dm-err" id="' + id + '-err" hidden></p></div>';
+		}).join('');
+		MS.forEach(function (m) {
+			var id = 'ms' + m.nr, s = MSS[m.nr] = {};
+			var ctl = [id + '-lv', id + '-dy', id + '-on', id + '-off'];
+			var show = function (d, first) {
+				var st = $(id + '-st'), er = $(id + '-err');
+				s.busy = false;
+				$(id + '-re').disabled = false;
+				// Without an answer the state is unknown: settings and switches stay
+				// disabled until a query succeeds
+				if (!d.ok) {
+					st.innerHTML = dot('bad') + '–';
+					er.textContent = errText(d); er.hidden = false;
+					return;
+				}
+				er.hidden = true;
+				ctl.forEach(function (c) { $(c).disabled = false; });
+				s.on = d.on; s.self = d.self;
+				if (first || d.on) { $(id + '-lv').value = d.want_level || 3; $(id + '-dy').value = d.want_days || 1; }
+				// Three states: off; switched on here, so the end is known; switched on
+				// elsewhere (Loxone Config), then only the set duration is known
+				var days = d.days === 1 ? L.MS_DAY : fmt(L.MS_DAYS_N, d.days || '?');
+				var t = !d.on ? L.MS_DISABLED :
+					d.until ? fmt(L.MS_ACTIVE, datetime(d.until), d.level) :
+					d.self ? fmt(L.MS_EXTERN, d.level, days) : fmt(L.MS_EXTERN_OTHER, d.target, d.level, days);
+				st.innerHTML = dot(d.on ? (d.self ? 'on' : 'idle') : '') + esc(t);
+				$(id + '-on').querySelector('span').textContent = d.on && d.self ? L.MS_APPLY : L.MS_ON;
+				$(id + '-off').disabled = !d.on;
+			};
+			var run = function (action, params, post, first) {
+				s.busy = true; s.activeAtQuery = s.active;
+				ctl.concat(id + '-re').forEach(function (c) { $(c).disabled = true; });
+				$(id + '-st').innerHTML = dot('') + esc(post ? L.MS_SWITCHING : L.MS_QUERY);
+				params.ms = m.nr;
+				api(action, params, post).then(function (d) { show(d, first); });
+			};
+			$(id + '-on').addEventListener('click', function () { run('msdebugset', { on: 1, level: $(id + '-lv').value, days: $(id + '-dy').value }, true); });
+			$(id + '-off').addEventListener('click', function () { run('msdebugset', { on: 0 }, true); });
+			$(id + '-re').addEventListener('click', function () { run('msdebug', {}, false); });
+			s.query = function () { run('msdebug', {}, false); };
+			run('msdebug', {}, false, true);
+		});
+	}
+	msCards();
 
 	poll();
 	recordings();
